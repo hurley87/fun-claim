@@ -13,8 +13,11 @@ export async function POST(req: NextRequest) {
     });
     const leaf = keccak256(word);
     const leafProof = tree.getProof(leaf);
-    const bufferToHex = (x: any) => '0x' + x.toString('hex');
-    const proof = leafProof.map((x: any) => bufferToHex(x.data));
+    const bufferToHex = (x: Buffer): string => '0x' + x.toString('hex');
+    const proof = leafProof.map(
+      (x: { position: 'left' | 'right'; data: Buffer }): string =>
+        bufferToHex(x.data)
+    );
 
     return new Response(JSON.stringify({ proof }), {
       status: 200,
