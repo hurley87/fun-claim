@@ -1,12 +1,9 @@
 'use client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Buffer } from 'buffer';
 import { http, createConfig } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { coinbaseWallet } from 'wagmi/connectors';
 import { WagmiProvider } from 'wagmi';
-
-globalThis.Buffer = Buffer;
 
 const queryClient = new QueryClient();
 
