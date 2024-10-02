@@ -1,7 +1,20 @@
 'use client';
 import { useState } from 'react';
-import { Connector, useAccount, useConnect, useWalletClient } from 'wagmi';
-import { encodeFunctionData, Hex, parseEther, toFunctionSelector } from 'viem';
+import {
+  Connector,
+  useAccount,
+  useConnect,
+  useReadContract,
+  useWalletClient,
+  useBalance,
+} from 'wagmi';
+import {
+  encodeFunctionData,
+  Hex,
+  parseEther,
+  toFunctionSelector,
+  formatEther,
+} from 'viem';
 import {
   useCallsStatus,
   useGrantPermissions,
@@ -14,6 +27,7 @@ import {
 } from 'webauthn-p256';
 import { mintAbi, mintAddress } from '@/lib/mint';
 import Letters from './letters';
+import { Button } from '@/components/ui/button';
 
 export default function Game() {
   const [permissionsContext, setPermissionsContext] = useState<
@@ -26,6 +40,7 @@ export default function Game() {
   const [isBuying, setIsBuying] = useState(false);
   const [isGranting, setIsGranting] = useState(false);
   const account = useAccount();
+  const address = account.address;
   const { connectors, connect } = useConnect();
   const { grantPermissionsAsync } = useGrantPermissions();
   const { data: walletClient } = useWalletClient({ chainId: 84532 });
@@ -38,27 +53,64 @@ export default function Game() {
         data.state.data?.status === 'PENDING' ? 500 : false,
     },
   });
+  const { data: hasClaimedFreeTokens, isLoading: hasClaimedFreeTokensLoading } =
+    useReadContract({
+      address: mintAddress,
+      abi: mintAbi,
+      functionName: 'hasClaimedFreeTokens',
+      args: [address],
+    });
+
+  const ethBalance = useBalance({
+    address: address,
+  });
+
+  const funBalance = useBalance({
+    address: address,
+    token: '0x0ea1113fd40f0abd399eea1472d2d9b6ab953298',
+  });
+
+  const contractFunBalance = useBalance({
+    address: mintAddress,
+    token: '0x0ea1113fd40f0abd399eea1472d2d9b6ab953298',
+  });
 
   const connector = connectors.find(
     (c) => c.type === 'coinbaseWallet'
   ) as Connector;
 
-  console.log('connector', connector);
-
   const login = async () => {
     connect({ connector });
   };
 
-  console.log('account', account.address);
+  console.log('account', address);
+  console.log('hasClaimedFreeTokens', hasClaimedFreeTokens);
+  console.log('hasClaimedFreeTokensLoading', hasClaimedFreeTokensLoading);
+
+  console.log('funBalance', funBalance.data?.value);
+
+  const balance = formatEther(ethBalance.data?.value ?? BigInt(0));
+
+  console.log('balance', balance);
+
+  const funTokens = formatEther(funBalance.data?.value ?? BigInt(0));
+
+  console.log('funTokens', funTokens);
+
+  const contractFunTokens = formatEther(
+    contractFunBalance.data?.value ?? BigInt(0)
+  );
+
+  console.log('contractFunTokens', contractFunTokens);
 
   const grantPermissions = async () => {
-    if (account.address) {
+    if (address) {
       setIsGranting(true);
       const newCredential = await createCredential({ type: 'cryptoKey' });
       const response = await grantPermissionsAsync({
         permissions: [
           {
-            address: account.address,
+            address: address,
             chainId: 84532,
             expiry: 17218875770,
             signer: {
@@ -98,18 +150,20 @@ export default function Game() {
   };
 
   const mintLetters = async () => {
-    if (account.address && permissionsContext && credential && walletClient) {
+    if (address && permissionsContext && credential && walletClient) {
       setIsBuying(true);
       const url = process.env.NEXT_PUBLIC_PAYMASTER_URL;
+      const value = hasClaimedFreeTokens ? parseEther('0.01') : parseEther('0');
 
       try {
         const callsId = await sendCallsAsync({
           calls: [
             {
               to: mintAddress,
+              value,
               data: encodeFunctionData({
                 abi: mintAbi,
-                functionName: 'mintSVG',
+                functionName: 'mintTen',
                 args: [],
               }),
             },
@@ -131,39 +185,27 @@ export default function Game() {
       } catch (e: unknown) {
         console.error('Error in sendCallsAsync:');
         console.log(e);
-        if (e instanceof Error) {
-          console.error(e.message);
-          console.error(e.stack);
-        } else {
-          console.error(String(e));
-        }
-        if (e && typeof e === 'object' && 'response' in e) {
-          console.error('Raw response:', e.response);
-        }
       }
       setIsBuying(false);
     }
   };
 
-  const address = account.address;
+  console.log('credential', credential);
 
   return (
     <div>
       <div className="flex flex-col gap-4">
-        {account.address && <div>{account.address}</div>}
-        {/* {!balances && <div>Mint allowance: {Number(mintAllowance)}</div>} */}
-        {!account.address && (
-          <button onClick={login} type="button">
-            Log in
-          </button>
-        )}
+        {address && <div>{address}</div>}
+        {address && <div>ETH Balance: {balance}</div>}
+        {address && <div>FUN Balance: {funTokens}</div>}
+        {address && <div>Contract FUN Balance: {contractFunTokens}</div>}
+        {!address && <Button onClick={login}>Log in</Button>}
       </div>
       <div>
-        {account.address &&
+        {address &&
           (permissionsContext ? (
             <>
-              <button
-                type="button"
+              <Button
                 onClick={mintLetters}
                 disabled={
                   isBuying ||
@@ -171,16 +213,12 @@ export default function Game() {
                 }
               >
                 Mint Letters
-              </button>
+              </Button>
             </>
           ) : (
-            <button
-              type="button"
-              onClick={grantPermissions}
-              disabled={isGranting}
-            >
+            <Button onClick={grantPermissions} disabled={isGranting}>
               Grant Permission
-            </button>
+            </Button>
           ))}
         {callsStatus && callsStatus.status === 'CONFIRMED' && (
           <a
@@ -192,7 +230,13 @@ export default function Game() {
           </a>
         )}
       </div>
-      {address && <Letters address={address} />}
+      {address && credential && (
+        <Letters
+          address={address}
+          credential={credential}
+          permissionsContext={permissionsContext as Hex}
+        />
+      )}
     </div>
   );
 }

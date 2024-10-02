@@ -1,4 +1,4 @@
-export const mintAddress = '0xF27b87167a614234a155ff3600590318d400Da97';
+export const mintAddress = '0x982D7D34B1288aAF1a7090599e8545FfceF13369';
 
 export const mintAbi = [
   {
@@ -310,6 +310,20 @@ export const mintAbi = [
   },
   {
     type: 'event',
+    name: 'MintRequested',
+    inputs: [
+      { name: 'user', type: 'address', indexed: true, internalType: 'address' },
+      {
+        name: 'isFreeClaim',
+        type: 'bool',
+        indexed: false,
+        internalType: 'bool',
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
     name: 'OwnershipTransferred',
     inputs: [
       {
@@ -329,6 +343,31 @@ export const mintAbi = [
   },
   {
     type: 'event',
+    name: 'RandomnessFulfilled',
+    inputs: [
+      {
+        name: 'recipient',
+        type: 'address',
+        indexed: true,
+        internalType: 'address',
+      },
+      {
+        name: 'ids',
+        type: 'uint256[]',
+        indexed: false,
+        internalType: 'uint256[]',
+      },
+      {
+        name: 'amounts',
+        type: 'uint256[]',
+        indexed: false,
+        internalType: 'uint256[]',
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
     name: 'RequestedRandomness',
     inputs: [
       {
@@ -338,6 +377,33 @@ export const mintAbi = [
         internalType: 'uint256',
       },
       { name: 'data', type: 'bytes', indexed: false, internalType: 'bytes' },
+    ],
+    anonymous: false,
+  },
+  {
+    type: 'event',
+    name: 'TokensBurnedAndRedeemed',
+    inputs: [
+      { name: 'user', type: 'address', indexed: true, internalType: 'address' },
+      { name: 'word', type: 'string', indexed: false, internalType: 'string' },
+      {
+        name: 'ids',
+        type: 'uint256[]',
+        indexed: false,
+        internalType: 'uint256[]',
+      },
+      {
+        name: 'amounts',
+        type: 'uint256[]',
+        indexed: false,
+        internalType: 'uint256[]',
+      },
+      {
+        name: 'tokenAmount',
+        type: 'uint256',
+        indexed: false,
+        internalType: 'uint256',
+      },
     ],
     anonymous: false,
   },
